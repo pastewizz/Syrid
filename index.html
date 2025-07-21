@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Syrid - Your Health Companion</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e40af 50%, #0f172a 100%);
+            min-height: 100vh;
+            color: white;
+        }
+
+        /* Header Styles */
+        .header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 50;
+            background: linear-gradient(90deg, rgba(30, 41, 59, 0.95) 0%, rgba(30, 64, 175, 0.95) 100%);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 16px 0;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            object-fit: contain;
+        }
+
+        .app-title {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            color: white;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .connection-status.connected {
+            background: rgba(16, 185, 129, 0.2);
+            color: #6ee7b7;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .connection-status.disconnected {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .language-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .globe-icon {
+            width: 16px;
+            height: 16px;
+            opacity: 0.7;
+        }
+
+        .lang-buttons {
+            display: flex;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 4px;
+        }
+
+        .lang-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .lang-btn:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .lang-btn.active {
+            background: white;
+            color: #1e293b;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Main Content */
+        .main {
+            padding-top: 120px;
+            padding-bottom: 32px;
+            padding-left: 16px;
+            padding-right: 16px;
+        }
+
+        .container {
+            max-width: 1024px;
+            margin: 0 auto;
+        }
+
+        .chat-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+        }
+
+        .welcome-section {
+            padding: 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .welcome-text {
+            color: rgba(255, 255, 255, 0.9);
+            line-height: 1.6;
+        }
+
+        .chat-area {
+            height: 400px;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .chat-area::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-area::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-area::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .empty-state-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .empty-logo {
+            width: 64px;
+            height: 64px;
+            opacity: 0.5;
+        }
+
+        .message {
+            display: flex;
+            max-width: 80%;
+        }
+
+        .message.user {
+            margin-left: auto;
+        }
+
+        .message.bot {
+            margin-right: auto;
+        }
+
+        .message-bubble {
+            padding: 16px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .message-bubble.user {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-bubble.bot {
+            background: rgba(255, 255, 255, 0.9);
+            color: #1e293b;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-sender {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            opacity: 0.75;
+        }
+
+        .message-content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #1e293b;
+            padding: 16px;
+            border-radius: 16px;
+            border-bottom-left-radius: 4px;
+            max-width: 80%;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #64748b;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        .input-section {
+            padding: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .input-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .textarea {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            color: white;
+            font-family: inherit;
+            font-size: 14px;
+            resize: none;
+            min-height: 80px;
+            transition: all 0.3s ease;
+        }
+
+        .textarea:focus {
+            outline: none;
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+        }
+
+        .textarea::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .textarea:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-outline {
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            background: transparent;
+        }
+
+        .btn-outline:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            border: 1px solid rgba(248, 113, 113, 0.5);
+            color: #fca5a5;
+            background: transparent;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: #f87171;
+        }
+
+        .icon {
+            width: 16px;
+            height: 16px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Footer */
+        .footer {
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 24px 0;
+            text-align: center;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 16px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .footer a {
+            color: #60a5fa;
+            text-decoration: underline;
+            transition: color 0.3s ease;
+        }
+
+        .footer a:hover {
+            color: #93c5fd;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .main {
+                padding-top: 140px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="header-left">
+                <div class="logo-container">
+                    <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/WhatsApp%20Image%202025-06-11%20at%2022.32.41_4fa07aca.jpg-GVXaHFrIOo8jf8mj5fd0xBv1q6Ccfi.jpeg" alt="Syrid Logo" class="logo">
+                    <h1 class="app-title">Syrid</h1>
+                </div>
+                <div id="connectionStatus" class="connection-status disconnected">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636L5.636 18.364m0-12.728L18.364 18.364"></path>
+                    </svg>
+                    <span id="connectionText">Disconnected</span>
+                </div>
+            </div>
+            
+            <div class="language-toggle">
+                <svg class="globe-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+                </svg>
+                <div class="lang-buttons">
+                    <button id="langEnglish" class="lang-btn active">English</button>
+                    <button id="langSwahili" class="lang-btn">Swahili</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <div class="chat-card">
+                <!-- Welcome Section -->
+                <div class="welcome-section">
+                    <p id="welcomeMessage" class="welcome-text">
+                        Welcome to Syrid, created by analyst.org to help humans be healthier! Describe your symptoms (e.g., headache, fever, stomach pain) to get personalized advice.
+                    </p>
+                </div>
+
+                <!-- Chat Area -->
+                <div class="chat-area" id="chatOutput">
+                    <div class="empty-state">
+                        <div class="empty-state-content">
+                            <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/WhatsApp%20Image%202025-06-11%20at%2022.32.41_4fa07aca.jpg-GVXaHFrIOo8jf8mj5fd0xBv1q6Ccfi.jpeg" alt="Syrid Logo" class="empty-logo">
+                            <p>Start a conversation to get health advice</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Section -->
+                <div class="input-section">
+                    <div class="input-container">
+                        <textarea 
+                            id="userInput" 
+                            class="textarea" 
+                            placeholder="Enter your symptoms here..."
+                            rows="3"
+                        ></textarea>
+                        
+                        <div class="button-group">
+                            <button id="sendButton" class="btn btn-primary">
+                                <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                                </svg>
+                                <span>Send</span>
+                            </button>
+                            
+                            <button id="clearChat" class="btn btn-outline">
+                                <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                                <span>Clear Chat</span>
+                            </button>
+                            
+                            <button id="monthlyInsights" class="btn btn-success">
+                                <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                </svg>
+                                <span>View Monthly Insights</span>
+                            </button>
+                            
+                            <button id="stopSurvey" class="btn btn-danger">
+                                <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path>
+                                </svg>
+                                <span>Stop Survey</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>Syrid by <a href="https://analyst.org" target="_blank">analyst.org</a>. Dedicated to helping humans live healthier lives.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Initialize user ID
+        let userId = localStorage.getItem('userId');
+        if (!userId) {
+            userId = crypto.randomUUID();
+            localStorage.setItem('userId', userId);
+        }
+
+        let language = 'en';
+        let isLoading = false;
+        let isInsightsLoading = false;
+
+        const translations = {
+            en: {
+                welcome: "Welcome to Syrid, created by analyst.org to help humans be healthier! Describe your symptoms (e.g., headache, fever, stomach pain) to get personalized advice.",
+                send: "Send",
+                clear: "Clear Chat",
+                insights: "View Monthly Insights",
+                stop: "Stop Survey",
+                placeholder: "Enter your symptoms here...",
+                connected: "Connected",
+                disconnected: "Disconnected",
+                you: "You",
+                syrid: "Syrid",
+                thinking: "Syrid is thinking...",
+                emptyState: "Start a conversation to get health advice"
+            },
+            sw: {
+                welcome: "Karibu Syrid, iliyoundwa na analyst.org kusaidia wanadamu wawe na afya bora! Elezea dalili zako (k.m., maumivu ya kichwa, homa, maumivu ya tumbo) kupata ushauri wa kibinafsi.",
+                send: "Tuma",
+                clear: "Futa Mazungumzo",
+                insights: "Tazama Maarifa ya Mwezi",
+                stop: "Acha Uchunguzi",
+                placeholder: "Ingiza dalili zako hapa...",
+                connected: "Imeunganishwa",
+                disconnected: "Haijaunganishwa",
+                you: "Wewe",
+                syrid: "Syrid",
+                thinking: "Syrid inafikiria...",
+                emptyState: "Anza mazungumzo kupata ushauri wa afya"
+            }
+        };
+
+        // DOM elements
+        const elements = {
+            chatOutput: document.getElementById('chatOutput'),
+            userInput: document.getElementById('userInput'),
+            sendButton: document.getElementById('sendButton'),
+            clearButton: document.getElementById('clearChat'),
+            insightsButton: document.getElementById('monthlyInsights'),
+            stopButton: document.getElementById('stopSurvey'),
+            connectionStatus: document.getElementById('connectionStatus'),
+            connectionText: document.getElementById('connectionText'),
+            welcomeMessage: document.getElementById('welcomeMessage'),
+            langEnglish: document.getElementById('langEnglish'),
+            langSwahili: document.getElementById('langSwahili')
+        };
+
+        function updateLanguage(lang) {
+            language = lang;
+            
+            // Update active language button
+            document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+            if (lang === 'en') {
+                elements.langEnglish.classList.add('active');
+            } else {
+                elements.langSwahili.classList.add('active');
+            }
+            
+            // Update UI text
+            const t = translations[lang];
+            elements.welcomeMessage.textContent = t.welcome;
+            elements.userInput.placeholder = t.placeholder;
+            elements.connectionText.textContent = elements.connectionStatus.classList.contains('connected') ? t.connected : t.disconnected;
+            
+            // Update button text
+            elements.sendButton.querySelector('span').textContent = t.send;
+            elements.clearButton.querySelector('span').textContent = t.clear;
+            elements.insightsButton.querySelector('span').textContent = t.insights;
+            elements.stopButton.querySelector('span').textContent = t.stop;
+
+            // Update empty state if visible
+            const emptyState = elements.chatOutput.querySelector('.empty-state p');
+            if (emptyState) {
+                emptyState.textContent = t.emptyState;
+            }
+        }
+
+        async function checkConnection() {
+            try {
+                await fetch('/');
+                elements.connectionStatus.classList.remove('disconnected');
+                elements.connectionStatus.classList.add('connected');
+                elements.connectionText.textContent = translations[language].connected;
+                
+                // Update connection icon
+                elements.connectionStatus.querySelector('svg').innerHTML = `
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path>
+                `;
+            } catch (error) {
+                elements.connectionStatus.classList.remove('connected');
+                elements.connectionStatus.classList.add('disconnected');
+                elements.connectionText.textContent = translations[language].disconnected;
+                
+                // Update connection icon
+                elements.connectionStatus.querySelector('svg').innerHTML = `
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636L5.636 18.364m0-12.728L18.364 18.364"></path>
+                `;
+            }
+        }
+
+        function addMessage(type, content, sender = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = `message-bubble ${type}`;
+            
+            const senderDiv = document.createElement('div');
+            senderDiv.className = 'message-sender';
+            senderDiv.textContent = sender || (type === 'user' ? translations[language].you : translations[language].syrid);
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = content;
+            
+            bubbleDiv.appendChild(senderDiv);
+            bubbleDiv.appendChild(contentDiv);
+            messageDiv.appendChild(bubbleDiv);
+            
+            // Remove empty state if it exists
+            const emptyState = elements.chatOutput.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+            
+            elements.chatOutput.appendChild(messageDiv);
+            elements.chatOutput.scrollTop = elements.chatOutput.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'typing-indicator';
+            typingDiv.id = 'typingIndicator';
+            
+            typingDiv.innerHTML = `
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+                <span>${translations[language].thinking}</span>
+            `;
+            
+            elements.chatOutput.appendChild(typingDiv);
+            elements.chatOutput.scrollTop = elements.chatOutput.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+
+        async function sendMessage() {
+            const input = elements.userInput.value.trim();
+            if (!input || isLoading) return;
+            
+            // Add user message
+            addMessage('user', input);
+            
+            // Clear input and disable
+            elements.userInput.value = '';
+            elements.userInput.disabled = true;
+            elements.sendButton.disabled = true;
+            isLoading = true;
+            
+            // Show typing indicator
+            showTypingIndicator();
+            
+            try {
+                const response = await fetch('/api/analyze-user-input', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        page_context: 'chatbot',
+                        input_data: { message: input },
+                        timestamp: new Date().toISOString()
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) throw new Error(data.error);
+                
+                // Hide typing indicator and add bot response
+                hideTypingIndicator();
+                addMessage('bot', data.reply);
+                
+            } catch (error) {
+                console.error('Error sending message:', error);
+                hideTypingIndicator();
+                const errorMessage = language === 'en' ? 'Failed to process your request.' : 'Imeshindwa kuchakata ombi lako.';
+                addMessage('bot', errorMessage);
+            } finally {
+                elements.userInput.disabled = false;
+                elements.sendButton.disabled = false;
+                isLoading = false;
+                elements.userInput.focus();
+            }
+        }
+
+        async function fetchMonthlyInsights() {
+            if (isInsightsLoading) return;
+            
+            elements.insightsButton.disabled = true;
+            isInsightsLoading = true;
+            
+            showTypingIndicator();
+            
+            try {
+                const response = await fetch('/api/analyze-user-input', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        page_context: 'insights',
+                        input_data: {},
+                        request_type: 'monthly_inspector',
+                        timestamp: new Date().toISOString()
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) throw new Error(data.error);
+                
+                hideTypingIndicator();
+                addMessage('bot', `Monthly Insights: ${data.insights}`);
+                
+            } catch (error) {
+                console.error('Error fetching insights:', error);
+                hideTypingIndicator();
+                const errorMessage = language === 'en' ? 'Failed to load monthly insights.' : 'Imeshindwa kupakia maarifa ya mwezi.';
+                addMessage('bot', errorMessage);
+            } finally {
+                elements.insightsButton.disabled = false;
+                isInsightsLoading = false;
+            }
+        }
+
+        function clearChat() {
+            elements.chatOutput.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-content">
+                        <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/WhatsApp%20Image%202025-06-11%20at%2022.32.41_4fa07aca.jpg-GVXaHFrIOo8jf8mj5fd0xBv1q6Ccfi.jpeg" alt="Syrid Logo" class="empty-logo">
+                        <p>${translations[language].emptyState}</p>
+                    </div>
+                </div>
+            `;
+            elements.userInput.value = '';
+        }
+
+        function stopSurvey() {
+            const message = language === 'en' 
+                ? 'Survey stopped. Start a new session anytime.' 
+                : 'Uchunguzi umesimamishwa. Anza kikao kipya wakati wowote.';
+            alert(message);
+            clearChat();
+        }
+
+        // Event listeners
+        elements.sendButton.addEventListener('click', sendMessage);
+        elements.clearButton.addEventListener('click', clearChat);
+        elements.insightsButton.addEventListener('click', fetchMonthlyInsights);
+        elements.stopButton.addEventListener('click', stopSurvey);
+        elements.langEnglish.addEventListener('click', () => updateLanguage('en'));
+        elements.langSwahili.addEventListener('click', () => updateLanguage('sw'));
+
+        elements.userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Initialize
+        checkConnection();
+        updateLanguage('en');
+        setInterval(checkConnection, 30000); // Check connection every 30 seconds
+    </script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+Intent,Response
+greet,Hello! I'm your AI medical assistant. How can I assist you today?
+greet,Hi there! Feel free to tell me your symptoms.
+greet,Welcome! Let's take care of your health together.
+greet,Hey! How are you feeling today?
+greet,Hi! Please describe how you're feeling so I can help.
+ask_symptoms,Can you describe your symptoms in a few words?
+ask_symptoms,What symptoms are you experiencing right now?
+ask_symptoms,Please enter the symptoms you're facing.
+ask_symptoms,Let me know what discomfort you're feeling.
+ask_symptoms,Which signs or issues have you noticed?
+diagnosis_given,Based on your symptoms you may be experiencing {condition}.
+diagnosis_given,You might be dealing with {condition}. Please consult a doctor for confirmation.
+diagnosis_given,The symptoms suggest a possibility of {condition}.
+diagnosis_given,It seems like you could have {condition}. I recommend medical attention.
+diagnosis_given,{condition} appears likely from your input.
+suggest_medication,A possible medication is {medicine} usually taken as {dosage}.
+suggest_medication,You can try {medicine}. The recommended dosage is {dosage}.
+suggest_medication,Doctors often prescribe {medicine} to be taken {dosage}.
+suggest_medication,{medicine} might help typically at {dosage} dosage.
+suggest_medication,Consider using {medicine} as advised: {dosage}.
+suggest_diet,For {condition try a diet that includes: {diet}. Avoid: {avoid}.
+suggest_diet,A healthy diet for {condition} includes {diet}. Please avoid {avoid}.
+suggest_diet,Managing {condition}? Eat more of {diet} and reduce {avoid}.
+suggest_diet,To support recovery from {condition} eat {diet}. Stay away from {avoid}.
+suggest_diet,{condition} care includes eating {diet} and avoiding {avoid}.
+thanks,You're welcome! Take care and stay healthy.
+thanks,Happy to help! Let me know if you need anything else.
+thanks,Thank you for using the assistant. Wishing you a quick recovery.
+thanks,Stay safe and well. Reach out any time.
+thanks,You're welcome. Hope you feel better soon!
+farewell,Goodbye! Stay healthy and hydrated.
+farewell,Take care! Don’t forget to rest.
+farewell,Signing off for now. Be well!
+farewell,Bye! Monitor your symptoms and seek help if they persist.
+farewell,All the best! Follow your prescribed care plan.
+fallback,I'm not sure I understood that. Could you rephrase?
+fallback,Sorry I didn’t catch that. Please try again with different words.
+fallback,Hmm that wasn’t clear. Want to try again?
+fallback,I’m having trouble understanding. Could you describe that another way?
+fallback,Could you clarify what you meant?
+clarify_diagnosis,{condition} is a condition that may involve symptoms like fatigue discomfort or pain.
+clarify_diagnosis,{condition} can vary in severity. It’s best to speak to a doctor for more info.
+clarify_diagnosis,That’s a medical condition often caused by lifestyle or infections.
+clarify_diagnosis,Doctors usually manage {condition} with tests meds and diet.
+clarify_diagnosis,{condition} affects many people and is treatable in most cases.
+ask_more_info,Would you like to know more about this condition?
+ask_more_info,Do you want tips for managing {condition}?
+ask_more_info,I can also share lifestyle changes for {condition}. Want them?
+ask_more_info,Need more info or a deeper explanation?
+ask_more_info,Would you like me to repeat or expand on that?
+emergency_advice,If you are having severe symptoms please visit the nearest hospital immediately.
+emergency_advice,This might be urgent. Please contact a healthcare professional now.
+emergency_advice,Seek immediate help if symptoms worsen or breathing becomes difficult.
+emergency_advice,Do not delay – severe conditions need physical checkups.
+emergency_advice,Call a local clinic or emergency service if you're in distress.
+emotion_support,You're not alone — help is available and recovery is possible.
+emotion_support,I understand this might be stressful. Let’s handle it together.
+emotion_support,Health challenges are normal — you’re doing the right thing by asking.
+emotion_support,It's okay to feel worried. I’m here to guide you.
+emotion_support,Take a deep breath. You're on the path to feeling better.
+lifestyle_tips,Get enough sleep stay hydrated and manage stress — it helps with healing.
+lifestyle_tips,Regular light exercise and proper meals make a big difference.
+lifestyle_tips,Avoid alcohol and smoking while recovering from illness.
+lifestyle_tips,Stick to a sleep routine and limit screen time.
+lifestyle_tips,Hygiene rest and support from loved ones help recovery.
+follow_up,Would you like to check another symptom?
+follow_up,Anything else you want me to help you with?
+follow_up,Do you want to explore diet or medication tips again?
+follow_up,Need help understanding another condition?
+follow_up,Let me know if you want to start over.
+confirm_medication,Yes {medicine} is often prescribed for {condition}.
+confirm_medication,Correct. {medicine} helps treat symptoms of {condition}.
+confirm_medication,{medicine} is commonly used for that issue.
+confirm_medication,That’s the right medication for {condition} in many cases.
+confirm_medication,Yes — and remember to follow the dosage: {dosage}.
+confirm_diet,Yes {diet} is a great fit for managing {condition}.
+confirm_diet,That diet helps reduce symptoms of {condition}.
+confirm_diet,You’re on the right track with {diet}.
+confirm_diet,Exactly — avoid {avoid} and keep eating {diet}.
+confirm_diet,Yes! Those foods are supportive for {condition}.
+confirm_symptoms,Yes those symptoms are common for {condition}.
+confirm_symptoms,That’s a typical symptom of {condition}.
+confirm_symptoms,Yes those symptoms align with {condition}.
+confirm_symptoms,Correct. Those symptoms are often seen in {condition}.
+confirm_symptoms,Yes those symptoms are consistent with {condition}.
+confirm_condition,Yes {condition} is a common condition.
+confirm_condition,That’s right. {condition} is often seen in patients.
+confirm_condition,Yes {condition} is a recognized medical issue.
+confirm_condition,Correct. {condition} is a common diagnosis.
+confirm_condition,Yes {condition} is a well-known condition.
+confirm_emergency,Yes that sounds serious. Please seek immediate medical attention.
+confirm_emergency,Yes that could be an emergency. Please call for help.
+confirm_emergency,Yes if you feel that way please see a doctor right away.
+confirm_emergency,Yes that’s a sign to get medical help quickly.
+confirm_emergency,Yes  if you’re feeling that way please don’t wait to get help.

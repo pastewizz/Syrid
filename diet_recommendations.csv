@@ -1,0 +1,33 @@
+Possible_Conditions,diet,Avoid,Diet_Tips
+Diabetes,"Ugali (millet or sorghum), Sukuma wiki, Githeri","Sugary mandazi, Sodas, White ugali","Eat small frequent meals, monitor glucose"
+Ulcers,"Maziwa lala, Bananas, Irio","Spicy mishkaki, Alcohol, Sugary chai","Eat soft meals, avoid long fasting"
+Anemia,"Managu, Liver, Githeri","Excess sugary chai, Alcohol",Pair iron foods with Vitamin C for absorption
+Hypertension,"Mangoes, Sukuma wiki, Low-fat maziwa lala","Fatty nyama choma, Salted kachumbari","Use less salt, increase potassium intake"
+Malnutrition,"Eggs, Groundnuts, Avocados","Mutura, Sugary mandazi",Eat calorie-dense foods with nutrients
+Fungal infection,"Maziwa lala, Terere","Sugary mandazi, White ugali",Maintain gut health
+Chronic cholestasis,"Githeri, Sukuma wiki","Fatty nyama choma, Alcohol",Small frequent meals
+Jaundice,"Mangoes, Sukuma wiki, Omena","Fatty nyama choma, Alcohol",Hydrate well
+Hepatitis A,"Mangoes, Sukuma wiki, Omena","Fatty nyama choma, Alcohol",Hydrate well
+Hepatitis B,"Mangoes, Sukuma wiki, Omena","Fatty nyama choma, Alcohol",Hydrate well
+Hepatitis C,"Mangoes, Sukuma wiki, Omena","Fatty nyama choma, Alcohol",Hydrate well
+Hepatitis D,"Mangoes, Sukuma wiki, Omena","Fatty nyama choma, Alcohol",Hydrate well
+Hepatitis E,"Mangoes, Sukuma wiki, Omena","Fatty nyama choma, Alcohol",Hydrate well
+Alcoholic hepatitis,"Mangoes, Sukuma wiki, Omena","Alcohol, Fatty nyama choma",Abstain from alcohol
+Chicken pox,"Irio, Mangoes, Soft ugali","Spicy samosas, Fatty nyama choma",Hydrate well
+Dengue,"Coconut water, Mangoes, Terere","Fatty nyama choma, Alcohol",Increase fluid intake
+Acne,"Ugali (millet), Sukuma wiki, Mangoes","Sugary mandazi, Full-fat maziwa lala",Stay hydrated
+Psoriasis,"Tilapia, Sukuma wiki, Githeri","Fatty nyama choma, Fried chips aand mayai",Anti-inflammatory diet
+Impetigo,"Githeri, Omena, Mangoes","Fried samosas, Sugary mandazi",Support immune health
+Common Cold,"Uji, Mangoes, Coconut water","Fatty nyama choma, Sugary mandazi",Stay hydrated
+Malaria,"Coconut water, Mangoes, Omena","Fatty nyama choma, Alcohol",Increase fluid intake
+Heart attack,"Mangoes, Sukuma wiki, Ugali (millet)","Fatty nyama choma, Salted kachumbari",Low-sodium diet
+Paralysis (brain hemorrhage),"Mangoes, Sukuma wiki, Ugali (millet)","Fatty nyama choma, Salted kachumbari",Low-sodium diet
+AIDS,"Omena, Githeri, Avocados","Mutura, Sugary mandazi",Calorie-dense nutrients
+Migraine,"Githeri, Sukuma wiki, Tilapia","Sugary chai, Fried chipsi mayai",Avoid trigger foods
+Cervical spondylosis,"Tilapia, Managu, Githeri","Fatty nyama choma, Fried samosas",Maintain healthy weight
+Varicose veins,"Githeri, Mangoes, Sukuma wiki","Salted kachumbari, Fatty nyama choma",Maintain healthy weight
+Hemorrhoids,"Githeri, Sukuma wiki, Mangoes","Spicy mishkaki, Alcohol",Increase fiber intake
+(vertigo) Paroxysmal Positional Vertigo,"Low-salt ugali, Mangoes, Sukuma wiki","Salted kachumbari, Sugary chai",Low-sodium diet
+Osteoarthritis,"Tilapia, Managu, Githeri","Fatty nyama choma, Fried chips and mayai",Maintain healthy weight
+Arthritis,"Tilapia, Managu, Githeri","Fatty nyama choma, Fried chipsi mayai",Anti-inflammatory diet
+Drug Reaction,"Mangoes, Sukuma wiki, Githeri","Trigger foods (e.g., spicy samosas), Alcohol",Identify trigger foods
