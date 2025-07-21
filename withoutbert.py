@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory, session
 from flask_cors import CORS
-import pandas as pd
+import csv
 import wikipediaapi
 import requests
 import logging
@@ -13,6 +13,7 @@ from datetime import datetime, date, timedelta
 import json
 from apscheduler.schedulers.background import BackgroundScheduler
 import uuid
+from typing import List, Dict
 
 app = Flask(__name__, static_folder='static', static_url_path='')
 app.secret_key = 'dky483yh983yh4tpo28py4p98t4y8374ti7256176t851ryo874to81465'
@@ -59,29 +60,38 @@ def init_db():
 scheduler = BackgroundScheduler()
 scheduler.start()
 
-def validate_csv_columns(df, required_columns, file_name):
-    missing_columns = [col for col in required_columns if col not in df.columns]
-    if missing_columns:
-        error_msg = f"Missing columns {missing_columns} in {file_name}. Available columns: {df.columns.tolist()}"
-        logging.error(error_msg)
-        raise KeyError(error_msg)
-    if df.empty:
-        error_msg = f"{file_name} is empty"
-        logging.error(error_msg)
-        raise ValueError(error_msg)
+def load_csv(file_path: str) -> List[Dict]:
+    """Lightweight CSV loader to replace pandas"""
+    with open(file_path, mode='r') as f:
+        return list(csv.DictReader(f))
+
+def validate_csv_columns(data: List[Dict], required_columns: List[str], file_name: str):
+    """Validate CSV structure"""
+    if not data:
+        raise ValueError(f"{file_name} is empty")
+    missing = [col for col in required_columns if col not in data[0]]
+    if missing:
+        raise KeyError(f"Missing columns {missing} in {file_name}")
 
 try:
-    symptoms_df = pd.read_csv('symptoms_conditions.csv')
-    validate_csv_columns(symptoms_df, ['Symptom', 'Possible_Conditions'], 'symptoms_conditions.csv')
-    medications_df = pd.read_csv('medications.csv')
-    validate_csv_columns(medications_df, ['Medicine', 'Possible_Conditions', 'Dosage_Adult'], 'medications.csv')
-    diet_df = pd.read_csv('diet_recommendations.csv')
-    validate_csv_columns(diet_df, ['Possible_Conditions', 'diet'], 'diet_recommendations.csv')
+    symptoms_data = load_csv('symptoms_conditions.csv')
+    validate_csv_columns(symptoms_data, ['Symptom', 'Possible_Conditions'], 'symptoms_conditions.csv')
+    
+    medications_data = load_csv('medications.csv')
+    validate_csv_columns(medications_data, ['Medicine', 'Possible_Conditions', 'Dosage_Adult'], 'medications.csv')
+    
+    diet_data = load_csv('diet_recommendations.csv')
+    validate_csv_columns(diet_data, ['Possible_Conditions', 'diet'], 'diet_recommendations.csv')
 except Exception as e:
-    logging.error(f"CSV Load Error: {e}")
+    logging.error(f"Data loading error: {e}")
     raise
 
-known_symptoms = symptoms_df['Symptom'].str.split(',').explode().str.strip().unique().tolist()
+# Process known symptoms
+known_symptoms = list({
+    symptom.strip() 
+    for row in symptoms_data 
+    for symptom in row['Symptom'].split(',')
+})
 urgent_symptoms = ['bleeding', 'chest pain', 'shortness of breath', 'severe pain']
 
 wiki_wiki = wikipediaapi.Wikipedia(user_agent='MedicalAI/1.0 (your.email@example.com)', language='en')
