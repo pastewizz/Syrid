@@ -344,11 +344,10 @@ def handle_analyze_user_input():
     except Exception as e:
         logging.error(f"Analyze User Input Error: {e}")
         return jsonify({'error': 'Failed to process request'}), 500
-
 if __name__ == '__main__':
     init_db()
-    port = 5000
-    ip_addresses = ['127.0.0.1']
+    port = int(os.environ.get("PORT", 5000))  # Use Render's PORT or fallback to 5000 locally
+    
     try:
         network_ip = socket.gethostbyname(socket.gethostname())
         if network_ip not in ip_addresses:
@@ -364,6 +363,7 @@ if __name__ == '__main__':
     except Exception as e:
         logging.error(f"Local IP retrieval failed: {e}")
     print("Application is running on the following URLs:")
-    for ip in ip_addresses:
-        print(f"  http://{ip}:{port}/")
-    app.run(host='0.0.0.0', port=port, debug=True, use_reloader=False)
+for ip in ip_addresses:
+    print(f"  http://{ip}:{port}/")
+
+     app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
