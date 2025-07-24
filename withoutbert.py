@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory, session
+from flask import Flask, request, jsonify, send_from_directory, session, render_template
 from flask_cors import CORS
 import csv
 import wikipediaapi
@@ -13,9 +13,14 @@ from datetime import datetime, date, timedelta
 import json
 from apscheduler.schedulers.background import BackgroundScheduler
 import uuid
+from groq import Groq
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__, static_folder='static', static_url_path='')
-app.secret_key = 'den38uy9385tyifuh745y3uht93fh9uh022uchgunhrungt9245uyt94hf8937yt5087y249uthycvyt29yt92m0nty'
+app.secret_key = os.getenv('FLASK_SECRET_KEY')
 CORS(app)
 
 # Configure logging
@@ -118,20 +123,32 @@ def get_wikipedia_summary(topic):
         logging.error(f"Wikipedia Error for topic '{topic}': {e}")
         return "Wikipedia lookup failed."
 
-def query_ollama(prompt, max_tokens=150):
+def query_medical_ai(prompt, max_tokens=767):
+    """
+    Uses Groq API instead of Ollama
+    Returns: Generated response as string
+    """
     doctor_prompt = "You are Syrid, a qualified medical professional. Analyze the following user health data and speak like a calm, knowledgeable doctor. "
-    prompt = doctor_prompt + prompt
+    full_prompt = doctor_prompt + prompt
+    
     try:
-        response = requests.post("http://localhost:11434/api/generate", json={
-            "model": "mistral",
-            "prompt": prompt,
-            "stream": False,
-            "options": {"num_predict": max_tokens}
-        })
-        return response.json().get("response", "Model did not respond.")
+        client = Groq(api_key=os.getenv("KYLE"))
+        
+        response = client.chat.completions.create(
+            model="qwen/qwen3-32b",
+            messages=[
+                {"role": "system", "content": "You are a doctor providing accurate, compassionate medical advice."},
+                {"role": "user", "content": full_prompt}
+            ],
+            temperature=0.3,
+            max_tokens=max_tokens,
+            top_p=0.9
+        )
+        return response.choices[0].message.content
+        
     except Exception as e:
-        logging.error(f"Ollama API Error: {e}")
-        return "I apologize, but I couldn't process your request. Please try again or consult a healthcare professional."
+        logging.error(f"Groq API Error: {e}")
+        return "I apologize, but I couldn't process your medical request at this time. Please try again later."
 
 def classify_symptoms(text):
     """Simplified symptom classification without pandas"""
@@ -207,7 +224,7 @@ def generate_summary(user_id, summary_type, period_start, period_end):
             
             summary_data = {'user_inputs': inputs}
             prompt = f"User asked: Please provide {summary_type} insights based on the following health data from {period_start} to {period_end}. Provide insights as a calm, knowledgeable doctor."
-            insights = query_ollama(json.dumps(summary_data) + prompt)
+            insights = query_medical_ai(json.dumps(summary_data) + prompt)
             
             c.execute('''
                 INSERT INTO summaries (user_id, summary_type, period_start, period_end, summary_data, insights, created_at)
@@ -251,7 +268,7 @@ scheduler.add_job(schedule_summaries, 'interval', days=1)
 @app.route('/')
 def serve_frontend():
     init_db()
-    return send_from_directory(app.static_folder, 'index.html')
+    return render_template('index.html')
 
 @app.route('/api/analyze-user-input', methods=['POST'])
 def handle_analyze_user_input():
@@ -283,7 +300,7 @@ def handle_analyze_user_input():
                 
                 summary_data = {'user_inputs': inputs}
                 prompt = f"User asked: Please provide monthly insights based on the following health data from {month_start} to {month_end}. Provide insights as a calm, knowledgeable doctor."
-                insights = query_ollama(json.dumps(summary_data) + prompt)
+                insights = query_medical_ai(json.dumps(summary_data) + prompt)
                 
                 return jsonify({
                     'user_id': user_id,
@@ -307,7 +324,7 @@ def handle_analyze_user_input():
                         reply = "Please clarify if the bleeding is heavy or light, and where it's occurring."
                     session.pop('context', None)
                     prompt = f"As a doctor, explain these steps clearly: {reply}"
-                    doctor_reply = query_ollama(prompt)
+                    doctor_reply = query_medical_ai(prompt)
                     return jsonify({'reply': doctor_reply})
             
             for symptom, details in urgent_symptoms.items():
@@ -320,7 +337,7 @@ def handle_analyze_user_input():
                 topic = user_input.split()[-1]
                 wiki = get_wikipedia_summary(topic)
                 prompt = f"User asked: {user_input}\nWikipedia says:\n{wiki}\nExplain clearly like a doctor in 500 words or less:"
-                reply = query_ollama(prompt)
+                reply = query_medical_ai(prompt)
                 return jsonify({'reply': reply})
             
             symptoms = [s for s in known_symptoms if s.lower() in user_input.lower()]
@@ -333,37 +350,19 @@ def handle_analyze_user_input():
                     f"Diet: {diet}\n"
                     f"As a doctor, explain the diagnosis, recommended treatment, and diet in a clear, empathetic way. Provide actionable advice."
                 )
-                reply = query_ollama(prompt)
+                reply = query_medical_ai(prompt)
                 reply += "\n\n⚠️ Monitor your symptoms and consult a doctor if they worsen."
                 return jsonify({'reply': reply})
             
             prompt = f"The user said: {user_input}\nRespond clearly and politely as a medical assistant."
-            reply = query_ollama(prompt)
+            reply = query_medical_ai(prompt)
             return jsonify({'reply': reply})
     
     except Exception as e:
         logging.error(f"Analyze User Input Error: {e}")
         return jsonify({'error': 'Failed to process request'}), 500
+
 if __name__ == '__main__':
     init_db()
-    port = int(os.environ.get("PORT", 5000))  # Use Render's PORT or fallback to 5000 locally
-    
-    try:
-        network_ip = socket.gethostbyname(socket.gethostname())
-        if network_ip not in ip_addresses:
-            ip_addresses.append(network_ip)
-    except socket.gaierror as e:
-        logging.error(f"Network IP retrieval failed: {e}")
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            s.connect(('8.8.8.8', 80))  # Google DNS
-            local_ip = s.getsockname()[0]
-            if local_ip not in ip_addresses:
-                ip_addresses.append(local_ip)
-    except Exception as e:
-        logging.error(f"Local IP retrieval failed: {e}")
-    print("Application is running on the following URLs:")
-for ip in ip_addresses:
-    print(f"  http://{ip}:{port}/")
-
-app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
