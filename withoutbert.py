@@ -271,7 +271,7 @@ def serve_frontend():
     index_path = os.path.join(app.static_folder, 'index.html')
     if not os.path.exists(index_path):
         return f"index.html not found at {index_path}", 500
-    return send_from_directory(app.static_folder, 'index.html')
+    return send_file('index.html')
 
 @app.route('/api/analyze-user-input', methods=['POST'])
 def handle_analyze_user_input():
