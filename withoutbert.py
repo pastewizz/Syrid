@@ -268,7 +268,7 @@ scheduler.add_job(schedule_summaries, 'interval', days=1)
 @app.route('/')
 def serve_frontend():
     init_db()
-    index_path = os.path.join(app.static_folder, 'index.html')
+    index_path = os.path.join('index.html')
     if not os.path.exists(index_path):
         return f"index.html not found at {index_path}", 500
     return send_file('index.html')
