@@ -1,5 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory, session, render_template
 from flask_cors import CORS
+from flask import send_file
+import os
 import csv
 import wikipediaapi
 import requests
@@ -268,10 +270,10 @@ scheduler.add_job(schedule_summaries, 'interval', days=1)
 @app.route('/')
 def serve_frontend():
     init_db()
-    index_path = os.path.join('index.html')
+    index_path = os.path.join(os.path.dirname(__file__), 'index.html')
     if not os.path.exists(index_path):
         return f"index.html not found at {index_path}", 500
-    return send_file('index.html')
+    return send_file(index_path)
 
 @app.route('/api/analyze-user-input', methods=['POST'])
 def handle_analyze_user_input():
