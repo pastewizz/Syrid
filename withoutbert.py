@@ -268,7 +268,10 @@ scheduler.add_job(schedule_summaries, 'interval', days=1)
 @app.route('/')
 def serve_frontend():
     init_db()
-    return render_template('index.html')
+    index_path = os.path.join(app.static_folder, 'index.html')
+    if not os.path.exists(index_path):
+        return f"index.html not found at {index_path}", 500
+    return send_from_directory(app.static_folder, 'index.html')
 
 @app.route('/api/analyze-user-input', methods=['POST'])
 def handle_analyze_user_input():
