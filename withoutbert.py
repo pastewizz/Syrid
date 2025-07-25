@@ -61,6 +61,15 @@ def init_db():
                 created_at TEXT
             )
         ''')
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS conversation_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT,
+                role TEXT,        -- "user" or "assistant"
+                message TEXT,
+                timestamp TEXT
+            )
+        ''')
         conn.commit()
 
 # Initialize scheduler
@@ -231,6 +240,43 @@ def save_user_input(user_id, page_context, input_data, timestamp):
         ''', (user_id, page_context, json.dumps(input_data), timestamp))
         conn.commit()
 
+def save_message(user_id, role, message, timestamp):
+    """Save a message to the conversation history"""
+    with sqlite3.connect(DB_FILE) as conn:
+        c = conn.cursor()
+        c.execute('''
+            INSERT INTO conversation_logs (user_id, role, message, timestamp)
+            VALUES (?, ?, ?, ?)
+        ''', (user_id, role, message, timestamp))
+        conn.commit()
+
+def get_recent_conversation(user_id, limit=6):
+    """Get recent conversation history for context"""
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute('''
+            SELECT role, message FROM conversation_logs
+            WHERE user_id = ?
+            ORDER BY timestamp DESC
+            LIMIT ?
+        ''', (user_id, limit))
+        rows = c.fetchall()[::-1]  # reverse to show oldest first
+        return [(row['role'], row['message']) for row in rows]
+
+def build_conversation_prompt(user_id, user_input):
+    """Build the conversation context for the AI prompt"""
+    history = get_recent_conversation(user_id)
+    formatted_history = ""
+    
+    for role, msg in history:
+        speaker = "User" if role == "user" else "Syrid"
+        formatted_history += f"{speaker}: {msg}\n"
+    
+    # Add the new user input and prepare for AI response
+    formatted_history += f"User: {user_input}\nSyrid:"
+    return formatted_history
+
 def generate_summary(user_id, summary_type, period_start, period_end):
     try:
         with sqlite3.connect(DB_FILE) as conn:
@@ -304,10 +350,13 @@ def handle_analyze_user_input():
         input_data = data.get('input_data', {})
         timestamp = data.get('timestamp', datetime.now().isoformat())
         request_type = data.get('request_type', '').strip()
+        user_input = input_data.get('message', '')
         
         if not user_id or not page_context or not input_data:
             return jsonify({'error': 'Missing required fields'}), 400
             
+        # Save the user message to conversation history
+        save_message(user_id, "user", user_input, timestamp)
         save_user_input(user_id, page_context, input_data, timestamp)
         
         if request_type.lower() == 'monthly_inspector':
@@ -340,7 +389,6 @@ def handle_analyze_user_input():
                 })
         
         else:
-            user_input = input_data.get('message', '')
             if not user_input:
                 return jsonify({'reply': 'Please enter a valid message.'})
                 
@@ -361,6 +409,7 @@ def handle_analyze_user_input():
                     )
                     doctor_reply_raw = query_medical_ai(prompt)
                     doctor_reply = clean_response(doctor_reply_raw)
+                    save_message(user_id, "assistant", doctor_reply, datetime.now().isoformat())
                     return jsonify({'reply': doctor_reply})
             
             for symptom, details in urgent_symptoms.items():
@@ -375,6 +424,7 @@ def handle_analyze_user_input():
                     )
                     doctor_reply_raw = query_medical_ai(prompt)
                     doctor_reply = clean_response(doctor_reply_raw)
+                    save_message(user_id, "assistant", doctor_reply, datetime.now().isoformat())
                     return jsonify({'reply': doctor_reply})
             
             is_educational = any(x in user_input.lower() for x in ["what is", "how does", "explain", "difference between"])
@@ -390,24 +440,25 @@ def handle_analyze_user_input():
                 )
                 reply_raw = query_medical_ai(prompt)
                 reply = clean_response(reply_raw)
+                save_message(user_id, "assistant", reply, datetime.now().isoformat())
                 return jsonify({'reply': reply})
             
             symptoms = [s for s in known_symptoms if s.lower() in user_input.lower()]
             if symptoms:
                 condition, medicine, dosage, diet, confidence = classify_symptoms(', '.join(symptoms))
                 if condition == "Unknown":
-                    prompt = (
-                        f"The user reports: {user_input}\n"
-                        "The symptoms are unclear. Respond empathetically with 1-2 targeted questions to clarify (e.g., duration, severity, additional symptoms). "
+                    prompt = build_conversation_prompt(user_id, user_input) + (
+                        "\nThe symptoms are unclear. Respond empathetically with 1-2 targeted questions to clarify (e.g., duration, severity, additional symptoms). "
                         "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'\n"
                         "Return only the final response, formatted as specified, with no additional tags or comments."
                     )
                     reply_raw = query_medical_ai(prompt)
                     reply = clean_response(reply_raw)
+                    save_message(user_id, "assistant", reply, datetime.now().isoformat())
                     return jsonify({'reply': reply})
-                prompt = (
-                    f"Patient reports: {user_input}\n"
-                    f"Diagnosis: {condition} (confidence: {confidence:.1%})\n"
+                
+                prompt = build_conversation_prompt(user_id, user_input) + (
+                    f"\nPatient reports these symptoms. Diagnosis: {condition} (confidence: {confidence:.1%})\n"
                     f"Medication: {medicine}, Dosage: {dosage}\n"
                     f"Diet: {diet}\n"
                     "Provide a structured response with:\n"
@@ -420,16 +471,17 @@ def handle_analyze_user_input():
                 reply_raw = query_medical_ai(prompt)
                 reply = clean_response(reply_raw)
                 reply += "\n\n⚠️ Monitor your symptoms and consult a doctor if they worsen."
+                save_message(user_id, "assistant", reply, datetime.now().isoformat())
                 return jsonify({'reply': reply})
             
-            prompt = (
-                f"The user said: {user_input}\n"
-                "Respond clearly and politely as a medical assistant. If the input is unclear, ask 1-2 targeted, empathetic questions to clarify (e.g., 'Can you describe your symptoms?' or 'How long have you felt this way?'). "
+            prompt = build_conversation_prompt(user_id, user_input) + (
+                "\nRespond clearly and politely as a medical assistant. If the input is unclear, ask 1-2 targeted, empathetic questions to clarify (e.g., 'Can you describe your symptoms?' or 'How long have you felt this way?'). "
                 "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'\n"
                 "Return only the final response, formatted as specified, with no additional tags or comments."
             )
             reply_raw = query_medical_ai(prompt)
             reply = clean_response(reply_raw)
+            save_message(user_id, "assistant", reply, datetime.now().isoformat())
             return jsonify({'reply': reply})
     
     except Exception as e:
