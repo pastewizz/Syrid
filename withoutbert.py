@@ -125,24 +125,24 @@ def get_wikipedia_summary(topic):
         logging.error(f"Wikipedia Error for topic '{topic}': {e}")
         return "Wikipedia lookup failed."
 
-# ... (Previous imports, app setup, logging, database init, CSV loading, handle_urgent_symptom, save_user_input, generate_summary, schedule_summaries, etc., remain unchanged)
-
 def query_medical_ai(prompt, max_tokens=767):
     """
-    Uses Groq API to process medical queries with optimized prompts, preserving original flexibility.
+    Uses Groq API to process medical queries with optimized prompts.
     Returns: Generated response as string
     """
     system_prompt = (
-        "You are Syrid, a qualified medical professional. Provide accurate, compassionate, and clear medical advice, mimicking a doctor's approach. "
-        "For symptom-related queries:\n"
-        "1. Analyze symptoms, duration, severity, and context (e.g., age, medical history) if provided.\n"
-        "2. If input is vague, ask 1-2 targeted, empathetic follow-up questions.\n"
-        "3. For clear inputs, suggest 3-5 possible conditions, an urgency level (Low: self-care; Moderate: see doctor within 24-48 hours; High: seek immediate care), and next steps.\n"
-        "4. Use empathetic, non-technical language and avoid jargon unless explained.\n"
-        "5. Always include: 'I am not a doctor; please consult one for a professional diagnosis.'\n"
-        "6. For urgent symptoms (e.g., chest pain, severe bleeding), prioritize immediate medical attention.\n"
-        "For non-symptom queries (e.g., educational or general health questions), respond clearly and concisely as a knowledgeable doctor."
+        "You are Syrid, a qualified medical professional. Your goal is to provide accurate, compassionate, and clear medical advice, mimicking a doctor's structured approach. "
+        "Follow these guidelines:\n"
+        "1. For symptom-related queries, analyze symptoms and context (if provided). If input is vague, ask 1-2 targeted, empathetic follow-up questions (e.g., duration, severity).\n"
+        "2. For clear symptom inputs, suggest 3-5 possible conditions, an urgency level (Low: self-care; Moderate: see doctor within 24-48 hours; High: seek immediate care), and next steps.\n"
+        "3. For urgent symptoms (e.g., chest pain, bleeding), prioritize immediate medical attention.\n"
+        "4. For educational queries (e.g., 'what is diabetes'), explain clearly in 500 words or less using reliable information.\n"
+        "5. For summary requests (e.g., weekly/monthly insights), analyze health data and provide actionable insights.\n"
+        "6. Use empathetic, non-technical language and avoid jargon unless explained.\n"
+        "7. Always include: 'I am not a doctor; please consult one for a professional diagnosis.'\n"
+        "8. For general queries, respond clearly and politely as a medical assistant."
     )
+    
     try:
         client = Groq(api_key=os.getenv("KYLE"))
         response = client.chat.completions.create(
@@ -160,80 +160,123 @@ def query_medical_ai(prompt, max_tokens=767):
         logging.error(f"Groq API Error: {e}")
         return "I apologize, but I couldn't process your medical request at this time. Please try again later."
 
-def classify_symptoms(text, user_context=None):
-    """
-    Classify symptoms using CSV or knowledge base, with dynamic questioning.
-    Returns: condition, medicine, dosage, diet, confidence, follow_up (or None)
-    """
+def classify_symptoms(text):
+    """Simplified symptom classification without pandas"""
     try:
-        matched_symptoms = [s for s in known_symptoms if s.lower() in text.lower()]
+        # Find matching symptoms
+        matched_symptoms = [
+            s for s in known_symptoms 
+            if s.lower() in text.lower()
+        ]
+        
         if not matched_symptoms:
-            follow_up = (
-                "I'm sorry you're not feeling well. Could you clarify your symptoms? For example, how long have they lasted, how severe are they, or do you have other symptoms like fever or pain?"
-            )
-            return "Unknown", "None", "None", "None", 0.0, follow_up
+            return "Unknown", "None", "None", "None", 0.0
+            
+        # Get first matching symptom's conditions
+        condition = next(
+            row['Possible_Conditions'] 
+            for row in symptoms_data 
+            if matched_symptoms[0].lower() in row['Symptom'].lower()
+        )
         
-        # Optional: Query knowledge base (e.g., Infermedica API)
-        use_knowledge_base = os.getenv("USE_KNOWLEDGE_BASE", "false").lower() == "true"
-        if use_knowledge_base:
-            try:
-                kb_response = requests.post(
-                    "https://api.infermedica.com/v3/parse",
-                    headers={"App-Id": os.getenv("INFERMEDICA_APP_ID"), "App-Key": os.getenv("INFERMEDICA_APP_KEY")},
-                    json={"text": text, "context": user_context or {}}
-                )
-                kb_response.raise_for_status()
-                data = kb_response.json()
-                conditions = data.get("conditions", [])
-                top_condition = conditions[0]["name"] if conditions else "Unknown"
-                confidence = conditions[0]["probability"] if conditions else 0.0
-                medicine = data.get("recommended_medication", "None")
-                dosage = data.get("dosage", "None")
-                diet = data.get("diet_recommendation", "None")
-            except Exception as e:
-                logging.error(f"Knowledge base query error: {e}")
-                use_knowledge_base = False  # Fallback to CSV
+        # Find related medication
+        medicine = next(
+            (row['Medicine'] for row in medications_data 
+            if condition.split(',')[0].lower() in row['Possible_Conditions'].lower()
+        ), "None")
         
-        # Fallback to CSV if knowledge base is disabled or fails
-        if not use_knowledge_base:
-            top_condition = next(
-                (row['Possible_Conditions'] for row in symptoms_data 
-                 if matched_symptoms[0].lower() in row['Symptom'].lower()), 
-                "Unknown"
-            )
-            medicine = next(
-                (row['Medicine'] for row in medications_data 
-                 if top_condition.split(',')[0].lower() in row['Possible_Conditions'].lower()),
-                "None"
-            )
-            dosage = next(
-                (row['Dosage_Adult'] for row in medications_data 
-                 if row['Medicine'] == medicine),
-                "None"
-            )
-            diet = next(
-                (row['diet'] for row in diet_data 
-                 if top_condition.split(',')[0].lower() in row['Possible_Conditions'].lower()),
-                "None"
-            )
-            confidence = min(0.9, len(matched_symptoms) * 0.3)
+        # Get dosage
+        dosage = next(
+            (row['Dosage_Adult'] for row in medications_data 
+            if row['Medicine'] == medicine
+        ), "None")
         
-        # Check for missing context
-        if user_context and not any(k in user_context for k in ['duration', 'severity']):
-            follow_up = (
-                "To better understand your symptoms, could you share how long you've had them and how severe they are (e.g., mild, moderate, severe)?"
-            )
-            return top_condition, medicine, dosage, diet, confidence, follow_up
-        return top_condition, medicine, dosage, diet, confidence, None
+        # Get diet recommendation
+        diet = next(
+            (row['diet'] for row in diet_data 
+            if condition.split(',')[0].lower() in row['Possible_Conditions'].lower()
+        ), "None")
+        
+        confidence = min(0.9, len(matched_symptoms) * 0.3)  # Simple confidence score
+        
+        return condition, medicine, dosage, diet, confidence
+        
     except Exception as e:
         logging.error(f"Classification error: {e}")
-        return "Unknown", "None", "None", "None", 0.0, "Please provide more details about your symptoms."
+        return "Unknown", "None", "None", "None", 0.0
+
+def handle_urgent_symptom(symptom, user_input):
+    if 'bleeding' in symptom.lower():
+        session['context'] = {'state': 'awaiting_bleeding_details', 'symptom': symptom}
+        return "I'm here to help. Is the bleeding heavy or light? Where is it occurring (e.g., nose, cut, internal)? Please provide more details."
+    return None
+
+def save_user_input(user_id, page_context, input_data, timestamp):
+    with sqlite3.connect(DB_FILE) as conn:
+        c = conn.cursor()
+        c.execute('''
+            INSERT INTO user_inputs (user_id, page_context, input_data, timestamp)
+            VALUES (?, ?, ?, ?)
+        ''', (user_id, page_context, json.dumps(input_data), timestamp))
+        conn.commit()
+
+def generate_summary(user_id, summary_type, period_start, period_end):
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            conn.row_factory = sqlite3.Row
+            c = conn.cursor()
+            c.execute('''
+                SELECT * FROM user_inputs 
+                WHERE user_id = ? AND timestamp BETWEEN ? AND ?
+                ORDER BY timestamp
+            ''', (user_id, period_start, period_end))
+            inputs = [dict(row) for row in c.fetchall()]
+            
+            summary_data = {'user_inputs': inputs}
+            prompt = f"User asked: Please provide {summary_type} insights based on the following health data from {period_start} to {period_end}. Provide insights as a calm, knowledgeable doctor."
+            insights = query_medical_ai(json.dumps(summary_data) + prompt)
+            
+            c.execute('''
+                INSERT INTO summaries (user_id, summary_type, period_start, period_end, summary_data, insights, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                user_id,
+                summary_type,
+                period_start,
+                period_end,
+                json.dumps(summary_data),
+                insights,
+                datetime.now().isoformat()
+            ))
+            conn.commit()
+            
+            return insights
+    except Exception as e:
+        logging.error(f"Summary Generation Error: {e}")
+        return "Unable to generate summary at this time. Please try again later."
+
+def schedule_summaries():
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            c = conn.cursor()
+            c.execute('SELECT DISTINCT user_id FROM user_inputs')
+            user_ids = [row[0] for row in c.fetchall()]
+            
+            today = datetime.now().date()
+            for user_id in user_ids:
+                week_start = today - timedelta(days=7)
+                generate_summary(user_id, 'weekly', week_start.isoformat(), today.isoformat())
+                month_start = today - timedelta(days=30)
+                generate_summary(user_id, 'monthly', month_start.isoformat(), today.isoformat())
+                year_start = today - timedelta(days=365)
+                generate_summary(user_id, 'yearly', year_start.isoformat(), today.isoformat())
+    except Exception as e:
+        logging.error(f"Scheduled Summary Error: {e}")
+
+scheduler.add_job(schedule_summaries, 'interval', days=1)
 
 @app.route('/')
 def serve_frontend():
-    """
-    Serve the frontend index.html file (restored from original code).
-    """
     init_db()
     index_path = os.path.join(os.path.dirname(__file__), 'index.html')
     if not os.path.exists(index_path):
@@ -271,10 +314,11 @@ def handle_analyze_user_input():
                 summary_data = {'user_inputs': inputs}
                 prompt = (
                     f"User asked: Please provide monthly insights based on the following health data from {month_start} to {month_end}. "
-                    "Provide insights as a calm, knowledgeable doctor. "
+                    "Analyze the data as a calm, knowledgeable doctor and provide actionable insights in 500 words or less. "
                     "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'"
                 )
                 insights = query_medical_ai(prompt)
+                
                 return jsonify({
                     'user_id': user_id,
                     'insights': insights,
@@ -286,7 +330,6 @@ def handle_analyze_user_input():
             if not user_input:
                 return jsonify({'reply': 'Please enter a valid message.'})
                 
-            # Handle urgent symptoms (including bleeding context)
             if 'context' in session:
                 context = session['context']
                 if context['state'] == 'awaiting_bleeding_details':
@@ -298,7 +341,8 @@ def handle_analyze_user_input():
                         reply = "Please clarify if the bleeding is heavy or light, and where it's occurring."
                     session.pop('context', None)
                     prompt = (
-                        f"As a doctor, explain these steps clearly: {reply}\n"
+                        f"The user reports: {user_input}\n"
+                        f"Provide clear, empathetic instructions based on this advice: {reply}\n"
                         "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'"
                     )
                     doctor_reply = query_medical_ai(prompt)
@@ -309,62 +353,67 @@ def handle_analyze_user_input():
                     urgent_reply = handle_urgent_symptom(symptom, user_input)
                     if urgent_reply:
                         return jsonify({'reply': urgent_reply})
-                    urgent_reply = details['response']
                     prompt = (
-                        f"As a doctor, explain this urgent advice clearly: {urgent_reply}\n"
+                        f"The user reports: {user_input}\n"
+                        f"Provide clear, empathetic instructions based on this urgent advice: {details['response']}\n"
                         "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'"
                     )
                     doctor_reply = query_medical_ai(prompt)
                     return jsonify({'reply': doctor_reply})
             
-            # Handle educational queries
             is_educational = any(x in user_input.lower() for x in ["what is", "how does", "explain", "difference between"])
             if is_educational:
                 topic = user_input.split()[-1]
                 wiki = get_wikipedia_summary(topic)
                 prompt = (
-                    f"User asked: {user_input}\nWikipedia says:\n{wiki}\n"
-                    "Explain clearly like a doctor in 500 words or less. "
+                    f"The user asked: {user_input}\n"
+                    f"Wikipedia information: {wiki}\n"
+                    "Explain the topic clearly and concisely as a doctor in 500 words or less. "
+                    "Use empathetic, non-technical language and ensure medical accuracy. "
                     "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'"
-                    "For symptom-related queries, ensure the response aligns with medical accuracy."
                 )
                 reply = query_medical_ai(prompt)
                 return jsonify({'reply': reply})
             
-            # Process symptoms with context
-            user_context = input_data.get('context', {})
-            condition, medicine, dosage, diet, confidence, follow_up = classify_symptoms(user_input, user_context)
-            
-            if follow_up:
+            symptoms = [s for s in known_symptoms if s.lower() in user_input.lower()]
+            if symptoms:
+                condition, medicine, dosage, diet, confidence = classify_symptoms(', '.join(symptoms))
+                if condition == "Unknown":
+                    prompt = (
+                        f"The user reports: {user_input}\n"
+                        "The symptoms are unclear. Respond empathetically and ask 1-2 targeted questions to clarify (e.g., duration, severity, additional symptoms). "
+                        "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'"
+                    )
+                    reply = query_medical_ai(prompt)
+                    return jsonify({'reply': reply})
                 prompt = (
-                    f"The user said: {user_input}\n"
-                    f"The input lacks critical details. Respond empathetically and ask: {follow_up}\n"
-                    "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'"
+                    f"Patient reports: {user_input}\n"
+                    f"Diagnosis: {condition} (confidence: {confidence:.1%})\n"
+                    f"Medication: {medicine}, Dosage: {dosage}\n"
+                    f"Diet: {diet}\n"
+                    "As a doctor, provide a structured response with:\n"
+                    "- **Possible Causes**: List 3-5 conditions with brief explanations.\n"
+                    "- **Urgency Level**: Low (self-care), Moderate (see doctor within 24-48 hours), or High (seek immediate care), with reason.\n"
+                    "- **Next Steps**: Specific actions (e.g., rest, hydrate, doctor visit).\n"
+                    "- **Disclaimer**: 'I am not a doctor; please consult one for a professional diagnosis.'\n"
+                    "Use empathetic, clear language in 100-150 words."
                 )
                 reply = query_medical_ai(prompt)
+                reply += "\n\n⚠️ Monitor your symptoms and consult a doctor if they worsen."
                 return jsonify({'reply': reply})
             
             prompt = (
-                f"Patient reports: {user_input}\n"
-                f"Diagnosis: {condition} (confidence: {confidence:.1%})\n"
-                f"Medication: {medicine}, Dosage: {dosage}\n"
-                f"Diet: {diet}\n"
-                "As a doctor, provide a structured response with:\n"
-                "- **Possible Causes**: List 3-5 conditions with brief explanations.\n"
-                "- **Urgency Level**: Low (self-care), Moderate (see doctor within 24-48 hours), or High (seek immediate care), with reason.\n"
-                "- **Next Steps**: Specific actions (e.g., rest, hydrate, doctor visit).\n"
-                "- **Disclaimer**: 'I am not a doctor; please consult one for a professional diagnosis.'\n"
-                "Use empathetic, clear language in 100-150 words."
+                f"The user said: {user_input}\n"
+                "Respond clearly and politely as a medical assistant. If the input is unclear, ask 1-2 targeted, empathetic questions to clarify. "
+                "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'"
             )
             reply = query_medical_ai(prompt)
-            reply += "\n\n⚠️ Monitor your symptoms and consult a doctor if they worsen."
             return jsonify({'reply': reply})
     
     except Exception as e:
         logging.error(f"Analyze User Input Error: {e}")
         return jsonify({'error': 'Failed to process request'}), 500
 
-# ... (Rest of the code, including handle_urgent_symptom, save_user_input, generate_summary, schedule_summaries, and app.run, remains unchanged)
 if __name__ == '__main__':
     init_db()
     port = int(os.environ.get("PORT", 5000))
