@@ -17,6 +17,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import uuid
 from groq import Groq
 from dotenv import load_dotenv
+import re
 
 # Load environment variables
 load_dotenv()
@@ -81,7 +82,7 @@ def validate_csv_columns(data, required_columns, file_name):
         raise ValueError(f"{file_name} is empty")
     missing = [col for col in required_columns if col not in data[0]]
     if missing:
-        raise KeyDeathError(f"Missing columns {missing} in {file_name}")
+        raise KeyError(f"Missing columns {missing} in {file_name}")
 
 try:
     # Load CSV files with pure Python
@@ -124,6 +125,11 @@ def get_wikipedia_summary(topic):
     except Exception as e:
         logging.error(f"Wikipedia Error for topic '{topic}': {e}")
         return "Wikipedia lookup failed."
+
+def clean_response(ai_response):
+    """Removes internal <think>...</think> blocks from AI output."""
+    cleaned = re.sub(r"<think>.*?</think>", "", ai_response, flags=re.DOTALL)
+    return cleaned.strip()
 
 def query_medical_ai(prompt, max_tokens=767):
     """
@@ -239,7 +245,8 @@ def generate_summary(user_id, summary_type, period_start, period_end):
             
             summary_data = {'user_inputs': inputs}
             prompt = f"User asked: Please provide {summary_type} insights based on the following health data from {period_start} to {period_end}. Provide insights as a calm, knowledgeable doctor."
-            insights = query_medical_ai(json.dumps(summary_data) + prompt)
+            insights_raw = query_medical_ai(json.dumps(summary_data) + prompt)
+            insights = clean_response(insights_raw)
             
             c.execute('''
                 INSERT INTO summaries (user_id, summary_type, period_start, period_end, summary_data, insights, created_at)
@@ -270,7 +277,7 @@ def schedule_summaries():
             today = datetime.now().date()
             for user_id in user_ids:
                 week_start = today - timedelta(days=7)
-                generate_summary(user_id, 'weekly', week_start.isoformat(), today's.isoformat())
+                generate_summary(user_id, 'weekly', week_start.isoformat(), today.isoformat())
                 month_start = today - timedelta(days=30)
                 generate_summary(user_id, 'monthly', month_start.isoformat(), today.isoformat())
                 year_start = today - timedelta(days=365)
@@ -323,7 +330,8 @@ def handle_analyze_user_input():
                     "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'\n"
                     f"Data: {json.dumps(summary_data)}"
                 )
-                insights = query_medical_ai(prompt)
+                insights_raw = query_medical_ai(prompt)
+                insights = clean_response(insights_raw)
                 
                 return jsonify({
                     'user_id': user_id,
@@ -351,7 +359,8 @@ def handle_analyze_user_input():
                         "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'\n"
                         "Return only the final response, formatted as specified, with no additional tags or comments."
                     )
-                    doctor_reply = query_medical_ai(prompt)
+                    doctor_reply_raw = query_medical_ai(prompt)
+                    doctor_reply = clean_response(doctor_reply_raw)
                     return jsonify({'reply': doctor_reply})
             
             for symptom, details in urgent_symptoms.items():
@@ -364,7 +373,8 @@ def handle_analyze_user_input():
                         "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'\n"
                         "Return only the final response, formatted as specified, with no additional tags or comments."
                     )
-                    doctor_reply = query_medical_ai(prompt)
+                    doctor_reply_raw = query_medical_ai(prompt)
+                    doctor_reply = clean_response(doctor_reply_raw)
                     return jsonify({'reply': doctor_reply})
             
             is_educational = any(x in user_input.lower() for x in ["what is", "how does", "explain", "difference between"])
@@ -378,7 +388,8 @@ def handle_analyze_user_input():
                     "Ensure medical accuracy and include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'\n"
                     "Return only the final response, formatted as specified, with no additional tags or comments."
                 )
-                reply = query_medical_ai(prompt)
+                reply_raw = query_medical_ai(prompt)
+                reply = clean_response(reply_raw)
                 return jsonify({'reply': reply})
             
             symptoms = [s for s in known_symptoms if s.lower() in user_input.lower()]
@@ -391,7 +402,8 @@ def handle_analyze_user_input():
                         "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'\n"
                         "Return only the final response, formatted as specified, with no additional tags or comments."
                     )
-                    reply = query_medical_ai(prompt)
+                    reply_raw = query_medical_ai(prompt)
+                    reply = clean_response(reply_raw)
                     return jsonify({'reply': reply})
                 prompt = (
                     f"Patient reports: {user_input}\n"
@@ -399,13 +411,14 @@ def handle_analyze_user_input():
                     f"Medication: {medicine}, Dosage: {dosage}\n"
                     f"Diet: {diet}\n"
                     "Provide a structured response with:\n"
-                    "- **Possible Causes**: List 3-5 conditions with brief explanations.\n"
-                    "- **Urgency Level**: Low (self-care), Moderate (see doctor within 24-48 hours), or High (seek immediate care), with a clear reason.\n"
-                    "- **Next Steps**: Specific, actionable advice (e.g., rest, hydrate, doctor visit).\n"
-                    "- **Disclaimer**: 'I am not a doctor; please consult one for a professional diagnosis.'\n"
+                    "- Possible Causes: List 3-5 conditions with brief explanations.\n"
+                    "- Urgency Level: Low (self-care), Moderate (see doctor within 24-48 hours), or High (seek immediate care), with a clear reason.\n"
+                    "- Next Steps: Specific, actionable advice (e.g., rest, hydrate, doctor visit).\n"
+                    "- Disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'\n"
                     "Use empathetic, clear language in 100-150 words. Return only the final response, formatted as specified, with no additional tags or comments."
                 )
-                reply = query_medical_ai(prompt)
+                reply_raw = query_medical_ai(prompt)
+                reply = clean_response(reply_raw)
                 reply += "\n\n⚠️ Monitor your symptoms and consult a doctor if they worsen."
                 return jsonify({'reply': reply})
             
@@ -415,7 +428,8 @@ def handle_analyze_user_input():
                 "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'\n"
                 "Return only the final response, formatted as specified, with no additional tags or comments."
             )
-            reply = query_medical_ai(prompt)
+            reply_raw = query_medical_ai(prompt)
+            reply = clean_response(reply_raw)
             return jsonify({'reply': reply})
     
     except Exception as e:
