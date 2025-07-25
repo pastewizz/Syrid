@@ -81,7 +81,7 @@ def validate_csv_columns(data, required_columns, file_name):
         raise ValueError(f"{file_name} is empty")
     missing = [col for col in required_columns if col not in data[0]]
     if missing:
-        raise KeyError(f"Missing columns {missing} in {file_name}")
+        raise KeyDeathError(f"Missing columns {missing} in {file_name}")
 
 try:
     # Load CSV files with pure Python
@@ -131,16 +131,21 @@ def query_medical_ai(prompt, max_tokens=767):
     Returns: Generated response as string
     """
     system_prompt = (
-        "You are Syrid, a qualified medical professional. Your goal is to provide accurate, compassionate, and clear medical advice, mimicking a doctor's structured approach. "
+        "You are Syrid, a qualified medical professional. Provide accurate, compassionate, and clear medical advice in a structured format, mimicking a doctor's approach. "
         "Follow these guidelines:\n"
-        "1. For symptom-related queries, analyze symptoms and context (if provided). If input is vague, ask 1-2 targeted, empathetic follow-up questions (e.g., duration, severity).\n"
-        "2. For clear symptom inputs, suggest 3-5 possible conditions, an urgency level (Low: self-care; Moderate: see doctor within 24-48 hours; High: seek immediate care), and next steps.\n"
-        "3. For urgent symptoms (e.g., chest pain, bleeding), prioritize immediate medical attention.\n"
-        "4. For educational queries (e.g., 'what is diabetes'), explain clearly in 500 words or less using reliable information.\n"
-        "5. For summary requests (e.g., weekly/monthly insights), analyze health data and provide actionable insights.\n"
-        "6. Use empathetic, non-technical language and avoid jargon unless explained.\n"
-        "7. Always include: 'I am not a doctor; please consult one for a professional diagnosis.'\n"
-        "8. For general queries, respond clearly and politely as a medical assistant."
+        "1. For symptom-related queries, analyze provided symptoms and context. If input is vague, respond with 1-2 empathetic, targeted follow-up questions (e.g., 'How long have you had the symptoms?' or 'How severe are they?').\n"
+        "2. For clear symptom inputs, provide a structured response with:\n"
+        "   - **Possible Causes**: List 3-5 conditions with brief explanations.\n"
+        "   - **Urgency Level**: Low (self-care), Moderate (see doctor within 24-48 hours), or High (seek immediate care), with a clear reason.\n"
+        "   - **Next Steps**: Specific, actionable advice (e.g., rest, hydrate, doctor visit).\n"
+        "   - **Disclaimer**: 'I am not a doctor; please consult one for a professional diagnosis.'\n"
+        "3. For urgent symptoms (e.g., chest pain, bleeding), prioritize immediate medical attention with clear instructions.\n"
+        "4. For educational queries (e.g., 'what is diabetes'), provide a clear, concise explanation in 500 words or less using reliable information.\n"
+        "5. For summary requests (e.g., weekly/monthly insights), analyze health data and provide actionable insights in 500 words or less.\n"
+        "6. Use empathetic, non-technical language and avoid medical jargon unless explained.\n"
+        "7. Do not include internal reasoning, thinking steps, or debugging information in the response.\n"
+        "8. For general or unclear queries, respond politely as a medical assistant, asking clarifying questions if needed.\n"
+        "Return only the final response, formatted as specified, with no additional tags or comments."
     )
     
     try:
@@ -265,7 +270,7 @@ def schedule_summaries():
             today = datetime.now().date()
             for user_id in user_ids:
                 week_start = today - timedelta(days=7)
-                generate_summary(user_id, 'weekly', week_start.isoformat(), today.isoformat())
+                generate_summary(user_id, 'weekly', week_start.isoformat(), today's.isoformat())
                 month_start = today - timedelta(days=30)
                 generate_summary(user_id, 'monthly', month_start.isoformat(), today.isoformat())
                 year_start = today - timedelta(days=365)
@@ -313,9 +318,10 @@ def handle_analyze_user_input():
                 
                 summary_data = {'user_inputs': inputs}
                 prompt = (
-                    f"User asked: Please provide monthly insights based on the following health data from {month_start} to {month_end}. "
-                    "Analyze the data as a calm, knowledgeable doctor and provide actionable insights in 500 words or less. "
-                    "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'"
+                    f"Analyze the following health data from {month_start} to {month_end} and provide {summary_type} insights as a calm, knowledgeable doctor. "
+                    "Focus on patterns, frequency, and actionable advice in 500 words or less. "
+                    "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'\n"
+                    f"Data: {json.dumps(summary_data)}"
                 )
                 insights = query_medical_ai(prompt)
                 
@@ -341,9 +347,9 @@ def handle_analyze_user_input():
                         reply = "Please clarify if the bleeding is heavy or light, and where it's occurring."
                     session.pop('context', None)
                     prompt = (
-                        f"The user reports: {user_input}\n"
                         f"Provide clear, empathetic instructions based on this advice: {reply}\n"
-                        "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'"
+                        "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'\n"
+                        "Return only the final response, formatted as specified, with no additional tags or comments."
                     )
                     doctor_reply = query_medical_ai(prompt)
                     return jsonify({'reply': doctor_reply})
@@ -354,9 +360,9 @@ def handle_analyze_user_input():
                     if urgent_reply:
                         return jsonify({'reply': urgent_reply})
                     prompt = (
-                        f"The user reports: {user_input}\n"
                         f"Provide clear, empathetic instructions based on this urgent advice: {details['response']}\n"
-                        "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'"
+                        "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'\n"
+                        "Return only the final response, formatted as specified, with no additional tags or comments."
                     )
                     doctor_reply = query_medical_ai(prompt)
                     return jsonify({'reply': doctor_reply})
@@ -366,11 +372,11 @@ def handle_analyze_user_input():
                 topic = user_input.split()[-1]
                 wiki = get_wikipedia_summary(topic)
                 prompt = (
-                    f"The user asked: {user_input}\n"
+                    f"User asked: {user_input}\n"
                     f"Wikipedia information: {wiki}\n"
-                    "Explain the topic clearly and concisely as a doctor in 500 words or less. "
-                    "Use empathetic, non-technical language and ensure medical accuracy. "
-                    "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'"
+                    "Provide a clear, concise explanation as a doctor in 500 words or less, using empathetic, non-technical language. "
+                    "Ensure medical accuracy and include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'\n"
+                    "Return only the final response, formatted as specified, with no additional tags or comments."
                 )
                 reply = query_medical_ai(prompt)
                 return jsonify({'reply': reply})
@@ -381,8 +387,9 @@ def handle_analyze_user_input():
                 if condition == "Unknown":
                     prompt = (
                         f"The user reports: {user_input}\n"
-                        "The symptoms are unclear. Respond empathetically and ask 1-2 targeted questions to clarify (e.g., duration, severity, additional symptoms). "
-                        "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'"
+                        "The symptoms are unclear. Respond empathetically with 1-2 targeted questions to clarify (e.g., duration, severity, additional symptoms). "
+                        "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'\n"
+                        "Return only the final response, formatted as specified, with no additional tags or comments."
                     )
                     reply = query_medical_ai(prompt)
                     return jsonify({'reply': reply})
@@ -391,12 +398,12 @@ def handle_analyze_user_input():
                     f"Diagnosis: {condition} (confidence: {confidence:.1%})\n"
                     f"Medication: {medicine}, Dosage: {dosage}\n"
                     f"Diet: {diet}\n"
-                    "As a doctor, provide a structured response with:\n"
+                    "Provide a structured response with:\n"
                     "- **Possible Causes**: List 3-5 conditions with brief explanations.\n"
-                    "- **Urgency Level**: Low (self-care), Moderate (see doctor within 24-48 hours), or High (seek immediate care), with reason.\n"
-                    "- **Next Steps**: Specific actions (e.g., rest, hydrate, doctor visit).\n"
+                    "- **Urgency Level**: Low (self-care), Moderate (see doctor within 24-48 hours), or High (seek immediate care), with a clear reason.\n"
+                    "- **Next Steps**: Specific, actionable advice (e.g., rest, hydrate, doctor visit).\n"
                     "- **Disclaimer**: 'I am not a doctor; please consult one for a professional diagnosis.'\n"
-                    "Use empathetic, clear language in 100-150 words."
+                    "Use empathetic, clear language in 100-150 words. Return only the final response, formatted as specified, with no additional tags or comments."
                 )
                 reply = query_medical_ai(prompt)
                 reply += "\n\n⚠️ Monitor your symptoms and consult a doctor if they worsen."
@@ -404,8 +411,9 @@ def handle_analyze_user_input():
             
             prompt = (
                 f"The user said: {user_input}\n"
-                "Respond clearly and politely as a medical assistant. If the input is unclear, ask 1-2 targeted, empathetic questions to clarify. "
-                "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'"
+                "Respond clearly and politely as a medical assistant. If the input is unclear, ask 1-2 targeted, empathetic questions to clarify (e.g., 'Can you describe your symptoms?' or 'How long have you felt this way?'). "
+                "Include a disclaimer: 'I am not a doctor; please consult one for a professional diagnosis.'\n"
+                "Return only the final response, formatted as specified, with no additional tags or comments."
             )
             reply = query_medical_ai(prompt)
             return jsonify({'reply': reply})
